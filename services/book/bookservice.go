@@ -2,7 +2,7 @@ package bookservice
 
 import (
 	"api/train/models"
-	authorservice "api/train/services/authors"
+	authorservice "api/train/services/author"
 	"database/sql"
 	"errors"
 	"fmt"

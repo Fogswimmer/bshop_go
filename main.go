@@ -25,7 +25,8 @@ func main() {
 	}
 
 	router := gin.Default()
-	routes.SetupRoutes(router, db)
+	routes.SetupBookRoutes(router, db)
+	routes.SetupAuthorRoutes(router, db)
 
 	router.Run(fmt.Sprintf(":%d", cfg.ServerPort))
 }

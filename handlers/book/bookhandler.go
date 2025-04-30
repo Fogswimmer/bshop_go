@@ -1,8 +1,9 @@
 // Хендлер - для обработки внешних HTTP запросов и соединения с базой данных
-package handlers
+package bookhandler
 
 import (
-	"api/train/services"
+	"api/train/models"
+	bookservice "api/train/services/books"
 	"database/sql"
 	"fmt"
 	"net/http"
@@ -11,19 +12,19 @@ import (
 )
 
 // Объявляем структуру
-type Handler struct {
+type BookHandler struct {
 	DB *sql.DB
 }
 
 // Создание экземпляра
-func NewHandler(db *sql.DB) *Handler {
-	return &Handler{DB: db}
+func NewHandler(db *sql.DB) *BookHandler {
+	return &BookHandler{DB: db}
 }
 
 // ==== МЕТОДЫ СТРУКТУРЫ ======
 // После слова func - ресивер с указателем
-func (h *Handler) GetBooks(c *gin.Context) {
-	books, err := services.FetchBooks(h.DB)
+func (h *BookHandler) GetBooks(c *gin.Context) {
+	books, err := bookservice.List(h.DB)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Failed to get books"})
 		return
@@ -31,15 +32,15 @@ func (h *Handler) GetBooks(c *gin.Context) {
 	c.JSON(200, books)
 }
 
-func (h *Handler) CreateBook(c *gin.Context) {
+func (h *BookHandler) CreateBook(c *gin.Context) {
 
-	var book services.BookRequest
+	var book models.BookRequest
 	if err := c.ShouldBindJSON(&book); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
 		return
 	}
 
-	createdBook, err := services.CreateBook(book, h.DB)
+	createdBook, err := bookservice.Create(book, h.DB)
 	if err != nil {
 		c.JSON(500, gin.H{"error": fmt.Sprintf("Book creation failed: %v", err)})
 		return

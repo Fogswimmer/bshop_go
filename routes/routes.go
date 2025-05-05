@@ -13,6 +13,7 @@ func SetupBookRoutes(router *gin.Engine, db *sql.DB) {
 
 	router.GET("/api/books", bh.GetBooks)
 	router.POST("/api/book", bh.CreateBook)
+	router.PUT("/api/book/:id", bh.UpdateBook)
 }
 
 func SetupAuthorRoutes(router *gin.Engine, db *sql.DB) {
@@ -20,4 +21,5 @@ func SetupAuthorRoutes(router *gin.Engine, db *sql.DB) {
 
 	router.GET("/api/authors", ah.GetAuthors)
 	router.POST("/api/author", ah.CreateAuthor)
+
 }

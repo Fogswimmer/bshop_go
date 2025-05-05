@@ -27,10 +27,10 @@ func List(db *sql.DB) ([]models.Author, error) {
 	return authors, nil
 }
 
-func Find(id int64, db *sql.DB) (models.Author, error) {
+func Find(id int, db *sql.DB) (models.Author, error) {
 	var a models.Author
 
-	row := db.QueryRow("SELECT id, firstname, lastname, birthday from author WHERE id = $1", id)
+	row := db.QueryRow("SELECT id, firstname, lastname, birthday FROM author WHERE id = $1", id)
 	if err := row.Scan(&a.ID, &a.Firstname, &a.Lastname, &a.Birthday); err != nil {
 		if err == sql.ErrNoRows {
 			return a, fmt.Errorf("FindAuthorById %d: no such author", id)
@@ -40,7 +40,7 @@ func Find(id int64, db *sql.DB) (models.Author, error) {
 	return a, nil
 }
 
-func Create(ar models.AuthorRequest, db *sql.DB) (int64, error) {
+func Create(ar models.AuthorRequest, db *sql.DB) (int, error) {
 	if ar.Firstname == "" {
 		return 0, errors.New("author firstname is required")
 	}
@@ -56,7 +56,7 @@ func Create(ar models.AuthorRequest, db *sql.DB) (int64, error) {
 		fmtBD = ""
 	}
 
-	var id int64
+	var id int
 	err := db.QueryRow(
 		"INSERT INTO author (firstname, lastname, birthday) VALUES ($1, $2, $3) RETURNING id",
 		ar.Firstname, ar.Lastname, fmtBD,

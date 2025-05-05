@@ -16,12 +16,12 @@ func main() {
 
 	db, err := sql.Open("postgres", cfg.PostgresDSN())
 	if err != nil {
-		log.Fatal("Ошибка подключения к базе:", err)
+		log.Fatal("Error conneting to DB:", err)
 	}
 	defer db.Close()
 
 	if err := db.Ping(); err != nil {
-		log.Fatal("База данных недоступна:", err)
+		log.Fatal("DB unreachable:", err)
 	}
 
 	router := gin.Default()

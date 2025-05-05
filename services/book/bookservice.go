@@ -27,7 +27,7 @@ func List(db *sql.DB) ([]models.Book, error) {
 	return books, nil
 }
 
-func Find(id int64, db *sql.DB) (models.Book, error) {
+func Find(id int, db *sql.DB) (models.Book, error) {
 	var b models.Book
 
 	row := db.QueryRow("SELECT id, title, release_year, summary, price, author_id from book WHERE id = $1", id)
@@ -46,7 +46,7 @@ func Find(id int64, db *sql.DB) (models.Book, error) {
 	return b, nil
 }
 
-func Create(br models.BookRequest, db *sql.DB) (int64, error) {
+func Create(br models.BookRequest, db *sql.DB) (int, error) {
 	if br.Title == "" {
 		return 0, errors.New("book title is required")
 	}
@@ -61,7 +61,7 @@ func Create(br models.BookRequest, db *sql.DB) (int64, error) {
 		return 0, fmt.Errorf("AuthorFind error: %v", err)
 	}
 
-	var id int64
+	var id int
 	err = db.QueryRow(
 		"INSERT INTO book (title, release_year, summary, price, author_id) VALUES ($1, $2, $3, $4, $5) RETURNING id",
 		br.Title, br.ReleaseYear, br.Summary, br.Price, authorID,
@@ -72,4 +72,32 @@ func Create(br models.BookRequest, db *sql.DB) (int64, error) {
 	}
 
 	return id, nil
+}
+
+func Update(id int, br models.BookRequest, db *sql.DB) error {
+	authorID := *br.AuthorID
+	_, err := authorservice.Find(authorID, db)
+
+	if err != nil {
+		return fmt.Errorf("AuthorFind error: %v", err)
+	}
+
+	res, err := db.Exec(
+		"UPDATE book SET title = $1, release_year = $2, summary = $3, price = $4, author_id = $5 WHERE id = $6",
+		br.Title, br.ReleaseYear, br.Summary, br.Price, authorID, id,
+	)
+
+	if err != nil {
+		return fmt.Errorf("UpdateBook error: %v", err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("RowsAffected error: %v", err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("no book with id %d found", id)
+	}
+
+	return nil
 }

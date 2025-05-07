@@ -6,7 +6,9 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 )
@@ -24,9 +26,17 @@ func main() {
 		log.Fatal("DB unreachable:", err)
 	}
 
-	router := gin.Default()
-	routes.SetupBookRoutes(router, db)
-	routes.SetupAuthorRoutes(router, db)
+	r := gin.Default()
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:8100"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
+	routes.SetupBookRoutes(r, db)
+	routes.SetupAuthorRoutes(r, db)
 
-	router.Run(fmt.Sprintf(":%d", cfg.ServerPort))
+	r.Run(fmt.Sprintf(":%d", cfg.ServerPort))
 }

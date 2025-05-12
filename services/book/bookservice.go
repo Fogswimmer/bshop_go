@@ -9,16 +9,34 @@ import (
 )
 
 func List(db *sql.DB) ([]models.Book, error) {
-	rows, err := db.Query("SELECT * FROM book")
+	query := `
+		SELECT b.id, b.title, b.release_date, b.summary, b.price,
+			a.id, a.firstname, a.lastname, a.birthday
+		FROM book b
+		LEFT JOIN author a ON b.author_id = a.id
+	`
+
+	rows, err := db.Query(query)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
 	var books []models.Book
+
 	for rows.Next() {
 		var b models.Book
-		err := rows.Scan(&b.ID, &b.Title, &b.ReleaseYear, &b.Summary, &b.Price, &b.AuthorID)
+		err := rows.Scan(
+			&b.ID,
+			&b.Title,
+			&b.ReleaseYear,
+			&b.Summary,
+			&b.Price,
+			&b.Author.ID,
+			&b.Author.Firstname,
+			&b.Author.Lastname,
+			&b.Author.Birthday,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -37,7 +55,9 @@ func Find(id int, db *sql.DB) (models.Book, error) {
 		&b.ReleaseYear,
 		&b.Summary,
 		&b.Price,
-		&b.AuthorID); err != nil {
+		&b.Author.ID,
+		models.GetAuthorFullName(b.Author),
+	); err != nil {
 		if err == sql.ErrNoRows {
 			return b, fmt.Errorf("FindBookById %d: no such book", id)
 		}

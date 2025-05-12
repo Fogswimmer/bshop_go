@@ -1,7 +1,7 @@
 package main
 
 import (
-	"api/train/config"
+	dbconfig "api/train/db/config"
 	"api/train/routes"
 	"database/sql"
 	"fmt"
@@ -14,12 +14,13 @@ import (
 )
 
 func main() {
-	cfg := config.LoadConfig()
+	cfg := dbconfig.LoadDBConfig()
 
 	db, err := sql.Open("postgres", cfg.PostgresDSN())
 	if err != nil {
-		log.Fatal("Error conneting to DB:", err)
+		log.Fatal("Error connecting to DB:", err)
 	}
+
 	defer db.Close()
 
 	if err := db.Ping(); err != nil {

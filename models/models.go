@@ -6,8 +6,7 @@ type Book struct {
 	ReleaseYear int     `json:"release_year"`
 	Summary     string  `json:"summary"`
 	Price       float64 `json:"price"`
-	AuthorID    int     `json:"author_id"`
-	AuthorName  string  `json:"author_name"`
+	Author Author `json:"author"`
 }
 
 type Author struct {
@@ -31,4 +30,8 @@ type AuthorRequest struct {
 	Firstname string `json:"firstname"`
 	Lastname  string `json:"lastname"`
 	Birthday  string `json:"birthday"`
+}
+
+func GetAuthorFullName(author Author) string {
+	return author.Firstname + " " + author.Lastname
 }

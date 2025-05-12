@@ -8,6 +8,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestListBooks(t *testing.T) {
@@ -17,11 +18,21 @@ func TestListBooks(t *testing.T) {
 	}
 	defer db.Close()
 
-	rows := sqlmock.NewRows([]string{"id", "title", "release_year", "summary", "price", "author_id"}).
-		AddRow(1, "Tom Sawyer", 1976, "An adventure book", 12.2, 1).
-		AddRow(2, "The Red Hat", 1986, "A fairy tale book", 14.2, 2)
+	rows := sqlmock.NewRows([]string{
+		"id", "title", "release_date", "summary", "price",
+		"author_id", "firstname", "lastname", "birthday",
+	}).
+		AddRow(1, "Tom Sawyer", 1976, "An adventure book", 12.2, 1, "Mark", "Twain", "1835-11-30").
+		AddRow(2, "The Red Hat", 1986, "A fairy tale book", 14.2, 2, "Charles", "Perrault", "1628-01-12")
 
-	mock.ExpectQuery("SELECT \\* FROM book").WillReturnRows(rows)
+	query := `
+		SELECT b.id, b.title, b.release_date, b.summary, b.price,
+			a.id, a.firstname, a.lastname, a.birthday
+		FROM book b
+		LEFT JOIN author a ON b.author_id = a.id
+	`
+
+	mock.ExpectQuery(query).WillReturnRows(rows)
 
 	books, err := bookservice.List(db)
 	assert.NoError(t, err)
@@ -33,35 +44,40 @@ func TestListBooks(t *testing.T) {
 		ReleaseYear: 1976,
 		Summary:     "An adventure book",
 		Price:       12.2,
-		AuthorID:    1,
+		Author: models.Author{
+			ID:        1,
+			Firstname: "Mark",
+			Lastname:  "Twain",
+			Birthday:  "1835-11-30",
+		},
 	}
 
 	assert.Equal(t, expected, books[0])
 }
 
 func TestCreateBookWithMockDB(t *testing.T) {
-
 	db, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("Error creating mock db: %v", err)
-	}
+	require.NoError(t, err)
 	defer db.Close()
 
 	mockAuthorFind(mock, 1)
 
-	aID := 1
-
+	authorID := 1
 	br := models.BookRequest{
 		Title:       "Tom Sawyer",
 		ReleaseYear: 1923,
 		Summary:     "An adventure book",
 		Price:       12.2,
-		AuthorID:    &aID,
+		AuthorID:    &authorID,
 	}
+
+	mock.ExpectQuery("INSERT INTO book \\(title, release_year, summary, price, author_id\\) VALUES \\(\\$1, \\$2, \\$3, \\$4, \\$5\\) RETURNING id").
+		WithArgs(br.Title, br.ReleaseYear, br.Summary, br.Price, authorID).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 
 	createdBook, err := bookservice.Create(br, db)
 	assert.NoError(t, err)
-	assert.Equal(t, int(1), createdBook)
+	assert.Equal(t, 1, createdBook)
 }
 
 func TestUpdateBookWithcMockDB(t *testing.T) {

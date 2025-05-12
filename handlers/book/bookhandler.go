@@ -1,4 +1,3 @@
-// Хендлер - для обработки внешних HTTP запросов и соединения с базой данных
 package bookhandler
 
 import (
@@ -13,18 +12,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Объявляем структуру
 type BookHandler struct {
 	DB *sql.DB
 }
 
-// Создание экземпляра
 func NewHandler(db *sql.DB) *BookHandler {
 	return &BookHandler{DB: db}
 }
 
-// ==== МЕТОДЫ СТРУКТУРЫ ======
-// После слова func - ресивер с указателем
 func (h *BookHandler) GetBooks(c *gin.Context) {
 	books, err := bookservice.List(h.DB)
 	if err != nil {

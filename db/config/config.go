@@ -1,4 +1,4 @@
-package config
+package dbconfig
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
-type Config struct {
+type DBConfig struct {
 	ServerPort int
 	DBHost     string
 	DBPort     int
@@ -17,13 +17,13 @@ type Config struct {
 	DBName     string
 }
 
-func LoadConfig() *Config {
+func LoadDBConfig() *DBConfig {
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Ошибка загрузки .env файла")
+		log.Fatal("Error loading .env file")
 	}
 
-	return &Config{
+	return &DBConfig{
 		ServerPort: 8080,
 		DBHost:     os.Getenv("DB_HOST"),
 		DBPort:     5432,
@@ -33,7 +33,7 @@ func LoadConfig() *Config {
 	}
 }
 
-func (c *Config) PostgresDSN() string {
+func (c *DBConfig) PostgresDSN() string {
 	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
 		c.DBHost, c.DBPort, c.DBUser, c.DBPassword, c.DBName)
 }

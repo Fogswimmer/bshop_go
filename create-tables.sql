@@ -12,6 +12,7 @@ CREATE TABLE book (
 CREATE TABLE author (
     id SERIAL NOT NULL,
     firstname VARCHAR(128) NOT NULL,
+    lastname VARCHAR(128) NOT NULL,
     birthday DATE NOT NULL,
     PRIMARY KEY (id)
 );

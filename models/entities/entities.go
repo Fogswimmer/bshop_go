@@ -1,4 +1,4 @@
-package models
+package entities
 
 type Book struct {
 	ID          int     `json:"id"`
@@ -15,22 +15,6 @@ type Author struct {
 	Lastname  string `json:"lastname"`
 	Birthday  string `json:"birthday"`
 	Books     []Book `json:"books"`
-}
-
-type BookRequest struct {
-	ID          *int    `json:"id"`
-	Title       string  `json:"title"`
-	ReleaseYear int     `json:"release_year"`
-	Summary     string  `json:"summary"`
-	Price       float64 `json:"price"`
-	AuthorID    int     `json:"author_id"`
-}
-
-type AuthorRequest struct {
-	ID        *int   `json:"id"`
-	Firstname string `json:"firstname"`
-	Lastname  string `json:"lastname"`
-	Birthday  string `json:"birthday"`
 }
 
 func GetAuthorFullName(author Author) string {

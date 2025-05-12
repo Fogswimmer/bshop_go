@@ -1,7 +1,8 @@
 package bookservice_test
 
 import (
-	"api/train/models"
+	"api/train/models/dto"
+	"api/train/models/entities"
 	bookservice "api/train/services/book"
 	"testing"
 	"time"
@@ -19,14 +20,14 @@ func TestListBooks(t *testing.T) {
 	defer db.Close()
 
 	rows := sqlmock.NewRows([]string{
-		"id", "title", "release_date", "summary", "price",
+		"id", "title", "release_year", "summary", "price",
 		"author_id", "firstname", "lastname", "birthday",
 	}).
 		AddRow(1, "Tom Sawyer", 1976, "An adventure book", 12.2, 1, "Mark", "Twain", "1835-11-30").
 		AddRow(2, "The Red Hat", 1986, "A fairy tale book", 14.2, 2, "Charles", "Perrault", "1628-01-12")
 
 	query := `
-		SELECT b.id, b.title, b.release_date, b.summary, b.price,
+		SELECT b.id, b.title, b.release_year, b.summary, b.price,
 			a.id, a.firstname, a.lastname, a.birthday
 		FROM book b
 		LEFT JOIN author a ON b.author_id = a.id
@@ -38,13 +39,13 @@ func TestListBooks(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, books, 2)
 
-	expected := models.Book{
+	expected := entities.Book{
 		ID:          1,
 		Title:       "Tom Sawyer",
 		ReleaseYear: 1976,
 		Summary:     "An adventure book",
 		Price:       12.2,
-		Author: models.Author{
+		Author: entities.Author{
 			ID:        1,
 			Firstname: "Mark",
 			Lastname:  "Twain",
@@ -62,7 +63,7 @@ func TestCreateBookWithMockDB(t *testing.T) {
 
 	mockAuthorFind(mock, 1)
 
-	br := models.BookRequest{
+	br := dto.BookDto{
 		Title:       "Tom Sawyer",
 		ReleaseYear: 1923,
 		Summary:     "An adventure book",
@@ -89,7 +90,7 @@ func TestUpdateBookWithcMockDB(t *testing.T) {
 
 	mockAuthorFind(mock, 1)
 
-	br := models.BookRequest{
+	br := dto.BookDto{
 		Title:       "Tom Sawyer",
 		ReleaseYear: 1923,
 		Summary:     "An adventure book",
@@ -102,6 +103,22 @@ func TestUpdateBookWithcMockDB(t *testing.T) {
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	err = bookservice.Update(bookId, br, db)
+	assert.NoError(t, err)
+}
+
+func TestDeleteBookWithMockDB(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("Error creating mock db: %v", err)
+	}
+	defer db.Close()
+	bookId := 1
+
+	mock.ExpectExec("DELETE FROM book WHERE id = \\$1").
+		WithArgs(bookId).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	err = bookservice.Delete(bookId, db)
 	assert.NoError(t, err)
 }
 

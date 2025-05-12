@@ -1,7 +1,7 @@
 package authorservice_test
 
 import (
-	"api/train/models"
+	"api/train/models/dto"
 	authorservice "api/train/services/author"
 	"testing"
 
@@ -18,7 +18,7 @@ func TestListAuthors(t *testing.T) {
 
 	rows := sqlmock.NewRows([]string{
 		"id", "firstname", "lastname", "birthday",
-		"id", "title", "release_date", "summary", "price"}).
+		"id", "title", "release_year", "summary", "price"}).
 		AddRow(1, "Jane", "Austen", "1775-12-16",
 			1, "Pride and Prejudice", 1813, "Pride and Prejudice is the second novel by English author Jane Austen, published in 1813", 23.0).
 		AddRow(2, "George", "Orwell", "1903-06-25",
@@ -26,7 +26,7 @@ func TestListAuthors(t *testing.T) {
 
 	query := `
 		SELECT a.id, a.firstname, a.lastname, a.birthday,
-			b.id, b.title, b.release_date, b.summary, b.price
+			b.id, b.title, b.release_year, b.summary, b.price
 		FROM author a
 		LEFT JOIN book b ON a.id = b.author_id
 	`
@@ -50,7 +50,7 @@ func TestCreateAuthorWithMockDB(t *testing.T) {
 	defer db.Close()
 	mock.ExpectQuery("INSERT INTO author").WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 
-	ar := models.AuthorRequest{
+	ar := dto.AuthorDto{
 		Firstname: "John",
 		Lastname:  "Doe",
 	}
@@ -68,18 +68,39 @@ func TestUpdateAuthorWithMockDB(t *testing.T) {
 	}
 	defer db.Close()
 	authorId := 1
-	ar := models.AuthorRequest{
+	dto := dto.AuthorDto{
 		Firstname: "John",
 		Lastname:  "Doe",
 		Birthday:  "2000-01-01",
 	}
 
-	fmtBD, _ := authorservice.FormatBD(ar.Birthday)
+	fmtBD, _ := authorservice.FormatBD(dto.Birthday)
 
 	mock.ExpectExec("UPDATE author SET firstname = \\$1, lastname = \\$2, birthday = \\$3 WHERE id = \\$4").
-		WithArgs(ar.Firstname, ar.Lastname, fmtBD, authorId).
+		WithArgs(dto.Firstname, dto.Lastname, fmtBD, authorId).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	err = authorservice.Update(authorId, ar, db)
+	err = authorservice.Update(authorId, dto, db)
+	assert.NoError(t, err)
+}
+
+func TestDeleteCascadeAuthorWithMockDB(t *testing.T) {
+
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("Error creating mock db: %v", err)
+	}
+	defer db.Close()
+	authorId := 1
+
+	mock.ExpectExec("DELETE FROM book WHERE author_id = \\$1").
+		WithArgs(authorId).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	mock.ExpectExec("DELETE FROM author WHERE id = \\$1").
+		WithArgs(authorId).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	err = authorservice.DeleteCascade(authorId, db)
 	assert.NoError(t, err)
 }

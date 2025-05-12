@@ -1,11 +1,13 @@
 package authorhandler
 
 import (
-	"api/train/models"
+	"api/train/helpers"
+	"api/train/models/dto"
 	authorservice "api/train/services/author"
 	"database/sql"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -21,7 +23,7 @@ func NewHandler(db *sql.DB) *AuthorHandler {
 func (h *AuthorHandler) GetAuthors(c *gin.Context) {
 	books, err := authorservice.List(h.DB)
 	if err != nil {
-		c.JSON(500, gin.H{"error": "Failed to get authors"})
+		c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to list authors: %v", err)})
 		return
 	}
 	c.JSON(200, books)
@@ -29,17 +31,31 @@ func (h *AuthorHandler) GetAuthors(c *gin.Context) {
 
 func (h *AuthorHandler) CreateAuthor(c *gin.Context) {
 
-	var book models.AuthorRequest
-	if err := c.ShouldBindJSON(&book); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+	var dto dto.AuthorDto
+	if !helpers.ValidateJSON(c, &dto) {
 		return
 	}
 
-	createdBook, err := authorservice.Create(book, h.DB)
+	createdAuthor, err := authorservice.Create(dto, h.DB)
 	if err != nil {
 		c.JSON(500, gin.H{"error": fmt.Sprintf("Author creation failed: %v", err)})
 		return
 	}
 
-	c.JSON(http.StatusOK, createdBook)
+	c.JSON(http.StatusOK, createdAuthor)
+}
+
+func (h *AuthorHandler) UpdateAuthor(c *gin.Context) {
+	id := c.Param("id")
+	authorId, _ := strconv.Atoi(id)
+	var dto dto.AuthorDto
+	if !helpers.ValidateJSON(c, &dto) {
+		return
+	}
+	err := authorservice.Update(authorId, dto, h.DB)
+	if err != nil {
+		c.JSON(500, gin.H{"error": fmt.Sprintf("Author updating failed: %v", err)})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": fmt.Sprintf("Author with ID %d successfully edited", authorId)})
 }

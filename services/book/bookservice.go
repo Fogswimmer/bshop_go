@@ -1,16 +1,18 @@
 package bookservice
 
 import (
-	"api/train/models"
+	"api/train/helpers"
+	"api/train/models/dto"
+	"api/train/models/forms/forms"
+	"api/train/models/response"
 	authorservice "api/train/services/author"
 	"database/sql"
-	"errors"
 	"fmt"
 )
 
-func List(db *sql.DB) ([]models.Book, error) {
+func List(db *sql.DB) ([]response.BookResponse, error) {
 	query := `
-		SELECT b.id, b.title, b.release_date, b.summary, b.price,
+		SELECT b.id, b.title, b.release_year, b.summary, b.price,
 			a.id, a.firstname, a.lastname, a.birthday
 		FROM book b
 		LEFT JOIN author a ON b.author_id = a.id
@@ -22,10 +24,12 @@ func List(db *sql.DB) ([]models.Book, error) {
 	}
 	defer rows.Close()
 
-	var books []models.Book
+	var books []response.BookResponse
 
 	for rows.Next() {
-		var b models.Book
+		var b response.BookResponse
+		b.Author = &forms.AuthorForm{}
+
 		err := rows.Scan(
 			&b.ID,
 			&b.Title,
@@ -42,11 +46,12 @@ func List(db *sql.DB) ([]models.Book, error) {
 		}
 		books = append(books, b)
 	}
+
 	return books, nil
 }
 
-func Find(id int, db *sql.DB) (models.Book, error) {
-	var b models.Book
+func Find(id int, db *sql.DB) (response.BookResponse, error) {
+	var b response.BookResponse
 
 	row := db.QueryRow("SELECT id, title, release_year, summary, price, author_id from book WHERE id = $1", id)
 	if err := row.Scan(
@@ -56,7 +61,7 @@ func Find(id int, db *sql.DB) (models.Book, error) {
 		&b.Summary,
 		&b.Price,
 		&b.Author.ID,
-		models.GetAuthorFullName(b.Author),
+		helpers.GetFullName(b.Author.Firstname, b.Author.Lastname),
 	); err != nil {
 		if err == sql.ErrNoRows {
 			return b, fmt.Errorf("FindBookById %d: no such book", id)
@@ -66,11 +71,7 @@ func Find(id int, db *sql.DB) (models.Book, error) {
 	return b, nil
 }
 
-func Create(br models.BookRequest, db *sql.DB) (int, error) {
-	if br.Title == "" {
-		return 0, errors.New("book title is required")
-	}
-
+func Create(br dto.BookDto, db *sql.DB) (int, error) {
 	_, err := authorservice.Find(br.AuthorID, db)
 	if err != nil {
 		return 0, fmt.Errorf("AuthorFind error: %v", err)
@@ -89,7 +90,7 @@ func Create(br models.BookRequest, db *sql.DB) (int, error) {
 	return id, nil
 }
 
-func Update(id int, br models.BookRequest, db *sql.DB) error {
+func Update(id int, br dto.BookDto, db *sql.DB) error {
 	_, err := authorservice.Find(br.AuthorID, db)
 
 	if err != nil {
@@ -103,6 +104,23 @@ func Update(id int, br models.BookRequest, db *sql.DB) error {
 
 	if err != nil {
 		return fmt.Errorf("UpdateBook error: %v", err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("RowsAffected error: %v", err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("no book with id %d found", id)
+	}
+
+	return nil
+}
+
+func Delete(id int, db *sql.DB) error {
+	res, err := db.Exec("DELETE FROM book WHERE id = $1", id)
+	if err != nil {
+		return fmt.Errorf("DeleteBook error: %v", err)
 	}
 
 	rowsAffected, err := res.RowsAffected()

@@ -1,17 +1,20 @@
 package authorservice
 
 import (
-	"api/train/models"
+	"api/train/models/dto"
+	"api/train/models/entities"
+	"api/train/models/forms/forms"
+	"api/train/models/response"
 	"database/sql"
 	"errors"
 	"fmt"
 	"time"
 )
 
-func List(db *sql.DB) ([]models.Author, error) {
+func List(db *sql.DB) ([]response.AuthorResponse, error) {
 	query := `
 		SELECT a.id, a.firstname, a.lastname, a.birthday,
-			b.id, b.title, b.release_date, b.summary, b.price
+			b.id, b.title, b.release_year, b.summary, b.price
 		FROM author a
 		LEFT JOIN book b ON a.id = b.author_id
 	`
@@ -22,7 +25,7 @@ func List(db *sql.DB) ([]models.Author, error) {
 	}
 	defer rows.Close()
 
-	authorMap := make(map[int]*models.Author)
+	authorMap := make(map[int]*response.AuthorResponse)
 
 	for rows.Next() {
 		var (
@@ -45,18 +48,18 @@ func List(db *sql.DB) ([]models.Author, error) {
 
 		author, exists := authorMap[authorID]
 		if !exists {
-			author = &models.Author{
+			author = &response.AuthorResponse{
 				ID:        authorID,
 				Firstname: firstname,
 				Lastname:  lastname,
 				Birthday:  birthday,
-				Books:     []models.Book{},
+				Books:     []forms.BookForm{},
 			}
 			authorMap[authorID] = author
 		}
 
 		if bookID.Valid {
-			book := models.Book{
+			book := forms.BookForm{
 				ID:          int(bookID.Int64),
 				Title:       bookTitle.String,
 				ReleaseYear: int(bookReleaseYear.Int64),
@@ -67,15 +70,15 @@ func List(db *sql.DB) ([]models.Author, error) {
 		}
 	}
 
-	var authors []models.Author
+	var authors []response.AuthorResponse
 	for _, author := range authorMap {
 		authors = append(authors, *author)
 	}
 	return authors, nil
 }
 
-func Find(id int, db *sql.DB) (models.Author, error) {
-	var a models.Author
+func Find(id int, db *sql.DB) (entities.Author, error) {
+	var a entities.Author
 
 	row := db.QueryRow("SELECT id, firstname, lastname, birthday FROM author WHERE id = $1", id)
 	if err := row.Scan(&a.ID, &a.Firstname, &a.Lastname, &a.Birthday); err != nil {
@@ -87,15 +90,15 @@ func Find(id int, db *sql.DB) (models.Author, error) {
 	return a, nil
 }
 
-func Create(ar models.AuthorRequest, db *sql.DB) (int, error) {
-	if ar.Firstname == "" {
+func Create(dto dto.AuthorDto, db *sql.DB) (int, error) {
+	if dto.Firstname == "" {
 		return 0, errors.New("author firstname is required")
 	}
 	var fmtBD string
 
-	if ar.Birthday != "" {
+	if dto.Birthday != "" {
 		var err error
-		fmtBD, err = FormatBD(ar.Birthday)
+		fmtBD, err = FormatBD(dto.Birthday)
 		if err != nil {
 			return 0, fmt.Errorf("error formatting date: %v", err)
 		}
@@ -106,7 +109,7 @@ func Create(ar models.AuthorRequest, db *sql.DB) (int, error) {
 	var id int
 	err := db.QueryRow(
 		"INSERT INTO author (firstname, lastname, birthday) VALUES ($1, $2, $3) RETURNING id",
-		ar.Firstname, ar.Lastname, fmtBD,
+		dto.Firstname, dto.Lastname, fmtBD,
 	).Scan(&id)
 
 	if err != nil {
@@ -116,16 +119,16 @@ func Create(ar models.AuthorRequest, db *sql.DB) (int, error) {
 	return id, nil
 }
 
-func Update(id int, ar models.AuthorRequest, db *sql.DB) error {
-	if ar.Firstname == "" {
+func Update(id int, dto dto.AuthorDto, db *sql.DB) error {
+	if dto.Firstname == "" {
 		return errors.New("author firstname is required")
 	}
 
 	var fmtBD string
 
-	if ar.Birthday != "" {
+	if dto.Birthday != "" {
 		var err error
-		fmtBD, err = FormatBD(ar.Birthday)
+		fmtBD, err = FormatBD(dto.Birthday)
 		if err != nil {
 			return fmt.Errorf("error formatting date: %v", err)
 		}
@@ -135,7 +138,7 @@ func Update(id int, ar models.AuthorRequest, db *sql.DB) error {
 
 	res, err := db.Exec(
 		"UPDATE author SET firstname = $1, lastname = $2, birthday = $3 WHERE id = $4",
-		ar.Firstname, ar.Lastname, fmtBD, id,
+		dto.Firstname, dto.Lastname, fmtBD, id,
 	)
 
 	if err != nil {
@@ -148,6 +151,20 @@ func Update(id int, ar models.AuthorRequest, db *sql.DB) error {
 	}
 	if rowsAffected == 0 {
 		return fmt.Errorf("no book with id %d found", id)
+	}
+
+	return nil
+}
+
+func DeleteCascade(id int, db *sql.DB) error {
+	_, err := db.Exec("DELETE FROM book WHERE author_id = $1", id)
+	if err != nil {
+		return fmt.Errorf("DeleteAuthor error: %v", err)
+	}
+
+	_, err = db.Exec("DELETE FROM author WHERE id = $1", id)
+	if err != nil {
+		return fmt.Errorf("DeleteAuthor error: %v", err)
 	}
 
 	return nil

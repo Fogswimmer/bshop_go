@@ -71,12 +71,7 @@ func Create(br models.BookRequest, db *sql.DB) (int, error) {
 		return 0, errors.New("book title is required")
 	}
 
-	if br.AuthorID == nil {
-		return 0, errors.New("author id is required")
-	}
-
-	authorID := *br.AuthorID
-	_, err := authorservice.Find(authorID, db)
+	_, err := authorservice.Find(br.AuthorID, db)
 	if err != nil {
 		return 0, fmt.Errorf("AuthorFind error: %v", err)
 	}
@@ -84,7 +79,7 @@ func Create(br models.BookRequest, db *sql.DB) (int, error) {
 	var id int
 	err = db.QueryRow(
 		"INSERT INTO book (title, release_year, summary, price, author_id) VALUES ($1, $2, $3, $4, $5) RETURNING id",
-		br.Title, br.ReleaseYear, br.Summary, br.Price, authorID,
+		br.Title, br.ReleaseYear, br.Summary, br.Price, br.AuthorID,
 	).Scan(&id)
 
 	if err != nil {
@@ -95,8 +90,7 @@ func Create(br models.BookRequest, db *sql.DB) (int, error) {
 }
 
 func Update(id int, br models.BookRequest, db *sql.DB) error {
-	authorID := *br.AuthorID
-	_, err := authorservice.Find(authorID, db)
+	_, err := authorservice.Find(br.AuthorID, db)
 
 	if err != nil {
 		return fmt.Errorf("AuthorFind error: %v", err)
@@ -104,7 +98,7 @@ func Update(id int, br models.BookRequest, db *sql.DB) error {
 
 	res, err := db.Exec(
 		"UPDATE book SET title = $1, release_year = $2, summary = $3, price = $4, author_id = $5 WHERE id = $6",
-		br.Title, br.ReleaseYear, br.Summary, br.Price, authorID, id,
+		br.Title, br.ReleaseYear, br.Summary, br.Price, br.AuthorID, id,
 	)
 
 	if err != nil {

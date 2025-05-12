@@ -62,17 +62,16 @@ func TestCreateBookWithMockDB(t *testing.T) {
 
 	mockAuthorFind(mock, 1)
 
-	authorID := 1
 	br := models.BookRequest{
 		Title:       "Tom Sawyer",
 		ReleaseYear: 1923,
 		Summary:     "An adventure book",
 		Price:       12.2,
-		AuthorID:    &authorID,
+		AuthorID:    1,
 	}
 
 	mock.ExpectQuery("INSERT INTO book \\(title, release_year, summary, price, author_id\\) VALUES \\(\\$1, \\$2, \\$3, \\$4, \\$5\\) RETURNING id").
-		WithArgs(br.Title, br.ReleaseYear, br.Summary, br.Price, authorID).
+		WithArgs(br.Title, br.ReleaseYear, br.Summary, br.Price, br.AuthorID).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 
 	createdBook, err := bookservice.Create(br, db)
@@ -87,7 +86,6 @@ func TestUpdateBookWithcMockDB(t *testing.T) {
 	}
 	defer db.Close()
 	bookId := 1
-	authorId := 1
 
 	mockAuthorFind(mock, 1)
 
@@ -96,10 +94,11 @@ func TestUpdateBookWithcMockDB(t *testing.T) {
 		ReleaseYear: 1923,
 		Summary:     "An adventure book",
 		Price:       12.2,
-		AuthorID:    &authorId,
+		AuthorID:    1,
 	}
+
 	mock.ExpectExec("UPDATE book SET title = \\$1, release_year = \\$2, summary = \\$3, price = \\$4, author_id = \\$5 WHERE id = \\$6").
-		WithArgs(br.Title, br.ReleaseYear, br.Summary, br.Price, authorId, bookId).
+		WithArgs(br.Title, br.ReleaseYear, br.Summary, br.Price, br.AuthorID, bookId).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	err = bookservice.Update(bookId, br, db)

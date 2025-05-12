@@ -6,7 +6,7 @@ type Book struct {
 	ReleaseYear int     `json:"release_year"`
 	Summary     string  `json:"summary"`
 	Price       float64 `json:"price"`
-	Author Author `json:"author"`
+	Author      Author  `json:"author"`
 }
 
 type Author struct {
@@ -14,6 +14,7 @@ type Author struct {
 	Firstname string `json:"firstname"`
 	Lastname  string `json:"lastname"`
 	Birthday  string `json:"birthday"`
+	Books     []Book `json:"books"`
 }
 
 type BookRequest struct {
@@ -22,7 +23,7 @@ type BookRequest struct {
 	ReleaseYear int     `json:"release_year"`
 	Summary     string  `json:"summary"`
 	Price       float64 `json:"price"`
-	AuthorID    *int    `json:"author_id"`
+	AuthorID    int     `json:"author_id"`
 }
 
 type AuthorRequest struct {

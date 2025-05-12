@@ -9,20 +9,67 @@ import (
 )
 
 func List(db *sql.DB) ([]models.Author, error) {
-	rows, err := db.Query("SELECT * FROM author")
+	query := `
+		SELECT a.id, a.firstname, a.lastname, a.birthday,
+			b.id, b.title, b.release_date, b.summary, b.price
+		FROM author a
+		LEFT JOIN book b ON a.id = b.author_id
+	`
+
+	rows, err := db.Query(query)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var authors []models.Author
+	authorMap := make(map[int]*models.Author)
+
 	for rows.Next() {
-		var a models.Author
-		err := rows.Scan(&a.ID, &a.Firstname, &a.Lastname, &a.Birthday)
+		var (
+			authorID        int
+			firstname       string
+			lastname        string
+			birthday        string
+			bookID          sql.NullInt64
+			bookTitle       sql.NullString
+			bookReleaseYear sql.NullInt64
+			bookSummary     sql.NullString
+			bookPrice       sql.NullFloat64
+		)
+
+		err := rows.Scan(&authorID, &firstname, &lastname, &birthday,
+			&bookID, &bookTitle, &bookReleaseYear, &bookSummary, &bookPrice)
 		if err != nil {
 			return nil, err
 		}
-		authors = append(authors, a)
+
+		author, exists := authorMap[authorID]
+		if !exists {
+			author = &models.Author{
+				ID:        authorID,
+				Firstname: firstname,
+				Lastname:  lastname,
+				Birthday:  birthday,
+				Books:     []models.Book{},
+			}
+			authorMap[authorID] = author
+		}
+
+		if bookID.Valid {
+			book := models.Book{
+				ID:          int(bookID.Int64),
+				Title:       bookTitle.String,
+				ReleaseYear: int(bookReleaseYear.Int64),
+				Summary:     bookSummary.String,
+				Price:       bookPrice.Float64,
+			}
+			author.Books = append(author.Books, book)
+		}
+	}
+
+	var authors []models.Author
+	for _, author := range authorMap {
+		authors = append(authors, *author)
 	}
 	return authors, nil
 }
@@ -48,7 +95,7 @@ func Create(ar models.AuthorRequest, db *sql.DB) (int, error) {
 
 	if ar.Birthday != "" {
 		var err error
-		fmtBD, err = formatBD(ar.Birthday)
+		fmtBD, err = FormatBD(ar.Birthday)
 		if err != nil {
 			return 0, fmt.Errorf("error formatting date: %v", err)
 		}
@@ -69,7 +116,44 @@ func Create(ar models.AuthorRequest, db *sql.DB) (int, error) {
 	return id, nil
 }
 
-func formatBD(bd string) (string, error) {
+func Update(id int, ar models.AuthorRequest, db *sql.DB) error {
+	if ar.Firstname == "" {
+		return errors.New("author firstname is required")
+	}
+
+	var fmtBD string
+
+	if ar.Birthday != "" {
+		var err error
+		fmtBD, err = FormatBD(ar.Birthday)
+		if err != nil {
+			return fmt.Errorf("error formatting date: %v", err)
+		}
+	} else {
+		fmtBD = ""
+	}
+
+	res, err := db.Exec(
+		"UPDATE author SET firstname = $1, lastname = $2, birthday = $3 WHERE id = $4",
+		ar.Firstname, ar.Lastname, fmtBD, id,
+	)
+
+	if err != nil {
+		return fmt.Errorf("UpdateAuthor error: %v", err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("RowsAffected error: %v", err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("no book with id %d found", id)
+	}
+
+	return nil
+}
+
+func FormatBD(bd string) (string, error) {
 	fmtBD, err := time.Parse("2006-01-02", bd)
 	if err != nil {
 		return "", err

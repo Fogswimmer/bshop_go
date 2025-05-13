@@ -2,6 +2,7 @@ package main
 
 import (
 	dbconfig "api/train/db/config"
+	"api/train/middleware"
 	"api/train/routes"
 	"database/sql"
 	"fmt"
@@ -28,6 +29,8 @@ func main() {
 	}
 
 	r := gin.Default()
+
+	log.Println("The server starts...")
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:8100"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
@@ -36,6 +39,8 @@ func main() {
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
+
+	r.Use(middleware.RequestLogger())
 	routes.SetupBookRoutes(r, db)
 	routes.SetupAuthorRoutes(r, db)
 

@@ -1,13 +1,13 @@
-package forms
+package simplemodels
 
-type AuthorForm struct {
+type AuthorSimple struct {
 	ID        int    `json:"id"`
 	Firstname string `json:"firstname"`
 	Lastname  string `json:"lastname"`
 	Birthday  string `json:"birthday"`
 }
 
-type BookForm struct {
+type BookSimple struct {
 	ID          int     `json:"id"`
 	Title       string  `json:"title"`
 	ReleaseYear int     `json:"release_year"`

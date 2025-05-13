@@ -1,9 +1,9 @@
 package bookservice
 
 import (
-	"api/train/helpers"
+	"api/train/mapper"
 	"api/train/models/dto"
-	"api/train/models/forms/forms"
+	"api/train/models/entities"
 	"api/train/models/response"
 	authorservice "api/train/services/author"
 	"database/sql"
@@ -24,55 +24,73 @@ func List(db *sql.DB) ([]response.BookResponse, error) {
 	}
 	defer rows.Close()
 
-	var books []response.BookResponse
+	var result []response.BookResponse
 
 	for rows.Next() {
-		var b response.BookResponse
-		b.Author = &forms.AuthorForm{}
+		var book entities.Book
+		var author entities.Author
+		book.Author = author
 
 		err := rows.Scan(
-			&b.ID,
-			&b.Title,
-			&b.ReleaseYear,
-			&b.Summary,
-			&b.Price,
-			&b.Author.ID,
-			&b.Author.Firstname,
-			&b.Author.Lastname,
-			&b.Author.Birthday,
+			&book.ID,
+			&book.Title,
+			&book.ReleaseYear,
+			&book.Summary,
+			&book.Price,
+			&book.Author.ID,
+			&book.Author.Firstname,
+			&book.Author.Lastname,
+			&book.Author.Birthday,
 		)
 		if err != nil {
 			return nil, err
 		}
-		books = append(books, b)
+
+		dto := mapper.MapToBookResponse(&book)
+		result = append(result, *dto)
 	}
 
-	return books, nil
+	return result, nil
 }
 
-func Find(id int, db *sql.DB) (response.BookResponse, error) {
-	var b response.BookResponse
+func Find(id int, db *sql.DB) (*response.BookResponse, error) {
+	var b entities.Book
+	b.Author = entities.Author{}
 
-	row := db.QueryRow("SELECT id, title, release_year, summary, price, author_id from book WHERE id = $1", id)
-	if err := row.Scan(
+	query := `
+		SELECT b.id, b.title, b.release_year, b.summary, b.price,
+			a.id, a.firstname, a.lastname, a.birthday
+		FROM book b
+		LEFT JOIN author a ON b.author_id = a.id
+		WHERE b.id = $1
+	`
+
+	row := db.QueryRow(query, id)
+
+	err := row.Scan(
 		&b.ID,
 		&b.Title,
 		&b.ReleaseYear,
 		&b.Summary,
 		&b.Price,
 		&b.Author.ID,
-		helpers.GetFullName(b.Author.Firstname, b.Author.Lastname),
-	); err != nil {
+		&b.Author.Firstname,
+		&b.Author.Lastname,
+		&b.Author.Birthday,
+	)
+	if err != nil {
 		if err == sql.ErrNoRows {
-			return b, fmt.Errorf("FindBookById %d: no such book", id)
+			return nil, fmt.Errorf("FindBookById %d: no such book", id)
 		}
-		return b, fmt.Errorf("FindBookById %d: %v", id, err)
+		return nil, fmt.Errorf("FindBookById %d: %v", id, err)
 	}
-	return b, nil
+
+	br := mapper.MapToBookResponse(&b)
+	return br, nil
 }
 
 func Create(br dto.BookDto, db *sql.DB) (int, error) {
-	_, err := authorservice.Find(br.AuthorID, db)
+	_, err := authorservice.FindEntity(br.AuthorID, db)
 	if err != nil {
 		return 0, fmt.Errorf("AuthorFind error: %v", err)
 	}
@@ -91,7 +109,7 @@ func Create(br dto.BookDto, db *sql.DB) (int, error) {
 }
 
 func Update(id int, br dto.BookDto, db *sql.DB) error {
-	_, err := authorservice.Find(br.AuthorID, db)
+	_, err := authorservice.FindEntity(br.AuthorID, db)
 
 	if err != nil {
 		return fmt.Errorf("AuthorFind error: %v", err)

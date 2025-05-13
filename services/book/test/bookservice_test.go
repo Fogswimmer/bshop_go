@@ -1,6 +1,7 @@
 package bookservice_test
 
 import (
+	"api/train/mapper"
 	"api/train/models/dto"
 	"api/train/models/entities"
 	bookservice "api/train/services/book"
@@ -56,6 +57,51 @@ func TestListBooks(t *testing.T) {
 	assert.Equal(t, expected, books[0])
 }
 
+func TestFindBookWithMockDB(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("Error creating mock db: %v", err)
+	}
+	defer db.Close()
+
+	bookId := 1
+
+	rows := sqlmock.NewRows([]string{
+		"id", "title", "release_year", "summary", "price",
+		"id", "firstname", "lastname", "birthday",
+	}).
+		AddRow(1, "Tom Sawyer", 1976, "An adventure book", 12.2, 1, "Mark", "Twain", "1835-11-30")
+
+	query := `
+        SELECT b.id, b.title, b.release_year, b.summary, b.price,
+            a.id, a.firstname, a.lastname, a.birthday
+        FROM book b
+        LEFT JOIN author a ON b.author_id = a.id
+        WHERE b.id = \$1
+    `
+	mock.ExpectQuery(query).WithArgs(bookId).WillReturnRows(rows)
+
+	book, err := bookservice.Find(bookId, db)
+	assert.NoError(t, err)
+
+	expected := entities.Book{
+		ID:          1,
+		Title:       "Tom Sawyer",
+		ReleaseYear: 1976,
+		Summary:     "An adventure book",
+		Price:       12.2,
+		Author: entities.Author{
+			ID:        1,
+			Firstname: "Mark",
+			Lastname:  "Twain",
+			Birthday:  "1835-11-30",
+		},
+	}
+	mapped := mapper.MapToBookResponse(&expected)
+
+	assert.Equal(t, mapped, book)
+}
+
 func TestCreateBookWithMockDB(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
@@ -63,7 +109,7 @@ func TestCreateBookWithMockDB(t *testing.T) {
 
 	mockAuthorFind(mock, 1)
 
-	br := dto.BookDto{
+	dto := dto.BookDto{
 		Title:       "Tom Sawyer",
 		ReleaseYear: 1923,
 		Summary:     "An adventure book",
@@ -72,10 +118,10 @@ func TestCreateBookWithMockDB(t *testing.T) {
 	}
 
 	mock.ExpectQuery("INSERT INTO book \\(title, release_year, summary, price, author_id\\) VALUES \\(\\$1, \\$2, \\$3, \\$4, \\$5\\) RETURNING id").
-		WithArgs(br.Title, br.ReleaseYear, br.Summary, br.Price, br.AuthorID).
+		WithArgs(dto.Title, dto.ReleaseYear, dto.Summary, dto.Price, dto.AuthorID).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 
-	createdBook, err := bookservice.Create(br, db)
+	createdBook, err := bookservice.Create(dto, db)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, createdBook)
 }
@@ -90,7 +136,7 @@ func TestUpdateBookWithcMockDB(t *testing.T) {
 
 	mockAuthorFind(mock, 1)
 
-	br := dto.BookDto{
+	dto := dto.BookDto{
 		Title:       "Tom Sawyer",
 		ReleaseYear: 1923,
 		Summary:     "An adventure book",
@@ -99,10 +145,10 @@ func TestUpdateBookWithcMockDB(t *testing.T) {
 	}
 
 	mock.ExpectExec("UPDATE book SET title = \\$1, release_year = \\$2, summary = \\$3, price = \\$4, author_id = \\$5 WHERE id = \\$6").
-		WithArgs(br.Title, br.ReleaseYear, br.Summary, br.Price, br.AuthorID, bookId).
+		WithArgs(dto.Title, dto.ReleaseYear, dto.Summary, dto.Price, dto.AuthorID, bookId).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	err = bookservice.Update(bookId, br, db)
+	err = bookservice.Update(bookId, dto, db)
 	assert.NoError(t, err)
 }
 

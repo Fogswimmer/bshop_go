@@ -1,9 +1,9 @@
 package authorservice
 
 import (
+	"api/train/mapper"
 	"api/train/models/dto"
 	"api/train/models/entities"
-	"api/train/models/forms/forms"
 	"api/train/models/response"
 	"database/sql"
 	"errors"
@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func List(db *sql.DB) ([]response.AuthorResponse, error) {
+func List(db *sql.DB) ([]*entities.Author, error) {
 	query := `
 		SELECT a.id, a.firstname, a.lastname, a.birthday,
 			b.id, b.title, b.release_year, b.summary, b.price
@@ -25,69 +25,118 @@ func List(db *sql.DB) ([]response.AuthorResponse, error) {
 	}
 	defer rows.Close()
 
-	authorMap := make(map[int]*response.AuthorResponse)
+	authorMap := make(map[int]*entities.Author)
 
 	for rows.Next() {
 		var (
-			authorID        int
-			firstname       string
-			lastname        string
-			birthday        string
-			bookID          sql.NullInt64
-			bookTitle       sql.NullString
-			bookReleaseYear sql.NullInt64
-			bookSummary     sql.NullString
-			bookPrice       sql.NullFloat64
+			aID   int
+			fname string
+			lname string
+			bday  string
+
+			bID   sql.NullInt64
+			title sql.NullString
+			year  sql.NullInt64
+			summ  sql.NullString
+			price sql.NullFloat64
 		)
 
-		err := rows.Scan(&authorID, &firstname, &lastname, &birthday,
-			&bookID, &bookTitle, &bookReleaseYear, &bookSummary, &bookPrice)
-		if err != nil {
+		if err := rows.Scan(&aID, &fname, &lname, &bday, &bID, &title, &year, &summ, &price); err != nil {
 			return nil, err
 		}
 
-		author, exists := authorMap[authorID]
-		if !exists {
-			author = &response.AuthorResponse{
-				ID:        authorID,
-				Firstname: firstname,
-				Lastname:  lastname,
-				Birthday:  birthday,
-				Books:     []forms.BookForm{},
+		author, ok := authorMap[aID]
+		if !ok {
+			author = &entities.Author{
+				ID:        aID,
+				Firstname: fname,
+				Lastname:  lname,
+				Birthday:  bday,
+				Books:     []entities.Book{},
 			}
-			authorMap[authorID] = author
+			authorMap[aID] = author
 		}
 
-		if bookID.Valid {
-			book := forms.BookForm{
-				ID:          int(bookID.Int64),
-				Title:       bookTitle.String,
-				ReleaseYear: int(bookReleaseYear.Int64),
-				Summary:     bookSummary.String,
-				Price:       bookPrice.Float64,
+		if bID.Valid {
+			book := entities.Book{
+				ID:          int(bID.Int64),
+				Title:       title.String,
+				ReleaseYear: int(year.Int64),
+				Summary:     summ.String,
+				Price:       price.Float64,
 			}
 			author.Books = append(author.Books, book)
 		}
 	}
 
-	var authors []response.AuthorResponse
-	for _, author := range authorMap {
-		authors = append(authors, *author)
+	var authors []*entities.Author
+	for _, a := range authorMap {
+		authors = append(authors, a)
 	}
 	return authors, nil
 }
 
-func Find(id int, db *sql.DB) (entities.Author, error) {
-	var a entities.Author
+func Find(id int, db *sql.DB) (*response.AuthorResponse, error) {
+	query := `
+		SELECT a.id, a.firstname, a.lastname, a.birthday,
+			b.id, b.title, b.release_year, b.summary, b.price
+		FROM author a
+		LEFT JOIN book b ON a.id = b.author_id
+		WHERE a.id = $1
+	`
 
-	row := db.QueryRow("SELECT id, firstname, lastname, birthday FROM author WHERE id = $1", id)
-	if err := row.Scan(&a.ID, &a.Firstname, &a.Lastname, &a.Birthday); err != nil {
-		if err == sql.ErrNoRows {
-			return a, fmt.Errorf("FindAuthorById %d: no such author", id)
-		}
-		return a, fmt.Errorf("FindAuthorById %d: %v", id, err)
+	rows, err := db.Query(query, id)
+	if err != nil {
+		return nil, fmt.Errorf("FindAuthor %d: %v", id, err)
 	}
-	return a, nil
+	defer rows.Close()
+
+	var author *entities.Author = nil
+
+	for rows.Next() {
+		var (
+			aID   int
+			fname string
+			lname string
+			bday  string
+
+			bID   sql.NullInt64
+			title sql.NullString
+			year  sql.NullInt64
+			summ  sql.NullString
+			price sql.NullFloat64
+		)
+
+		if err := rows.Scan(&aID, &fname, &lname, &bday, &bID, &title, &year, &summ, &price); err != nil {
+			return nil, err
+		}
+
+		if author == nil {
+			author = &entities.Author{
+				ID:        aID,
+				Firstname: fname,
+				Lastname:  lname,
+				Birthday:  bday,
+				Books:     []entities.Book{},
+			}
+		}
+		if bID.Valid {
+			book := entities.Book{
+				ID:          int(bID.Int64),
+				Title:       title.String,
+				ReleaseYear: int(year.Int64),
+				Summary:     summ.String,
+				Price:       price.Float64,
+			}
+			author.Books = append(author.Books, book)
+		}
+	}
+
+	if author == nil {
+		return nil, fmt.Errorf("FindAuthor %d: no such author", id)
+	}
+
+	return mapper.MapToAuthorResponse(author), nil
 }
 
 func Create(dto dto.AuthorDto, db *sql.DB) (int, error) {
@@ -168,6 +217,19 @@ func DeleteCascade(id int, db *sql.DB) error {
 	}
 
 	return nil
+}
+
+func FindEntity(id int, db *sql.DB) (entities.Author, error) {
+	var a entities.Author
+
+	row := db.QueryRow("SELECT id, firstname, lastname, birthday FROM author WHERE id = $1", id)
+	if err := row.Scan(&a.ID, &a.Firstname, &a.Lastname, &a.Birthday); err != nil {
+		if err == sql.ErrNoRows {
+			return a, fmt.Errorf("FindAuthorById %d: no such author", id)
+		}
+		return a, fmt.Errorf("FindAuthorById %d: %v", id, err)
+	}
+	return a, nil
 }
 
 func FormatBD(bd string) (string, error) {

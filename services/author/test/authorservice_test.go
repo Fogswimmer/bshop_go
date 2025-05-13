@@ -41,6 +41,41 @@ func TestListAuthors(t *testing.T) {
 	assert.Equal(t, "Pride and Prejudice", authors[0].Books[0].Title)
 }
 
+func TestFinAuthorWithMockDB(t *testing.T) {
+
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("Error creating mock db: %v", err)
+	}
+	defer db.Close()
+
+	authorId := 1
+
+	rows := sqlmock.NewRows([]string{
+		"id", "firstname", "lastname", "birthday",
+		"id", "title", "release_year", "summary", "price"}).
+		AddRow(1, "Jane", "Austen", "1775-12-16",
+			1, "Pride and Prejudice", 1813, "Pride and Prejudice is the second novel by English author Jane Austen, published in 1813", 23.0).
+		AddRow(1, "Jane", "Austen", "1775-12-16",
+			2, "Sense and Sensibility", 1813, "Sense and Sensibility is a novel by English author Jane Austen, published in 1813", 23.0)
+
+	query := `
+		SELECT a.id, a.firstname, a.lastname, a.birthday,
+			b.id, b.title, b.release_year, b.summary, b.price
+		FROM author a
+		LEFT JOIN book b ON a.id = b.author_id
+		WHERE a.id = \$1
+	`
+
+	mock.ExpectQuery(query).WithArgs(authorId).WillReturnRows(rows)
+
+	author, _ := authorservice.Find(authorId, db)
+
+	assert.Equal(t, "Jane", author.Firstname)
+	assert.Equal(t, 2, len(author.Books))
+	assert.Equal(t, "Pride and Prejudice", author.Books[0].Title)
+}
+
 func TestCreateAuthorWithMockDB(t *testing.T) {
 
 	db, mock, err := sqlmock.New()
@@ -50,12 +85,12 @@ func TestCreateAuthorWithMockDB(t *testing.T) {
 	defer db.Close()
 	mock.ExpectQuery("INSERT INTO author").WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 
-	ar := dto.AuthorDto{
+	dto := dto.AuthorDto{
 		Firstname: "John",
 		Lastname:  "Doe",
 	}
 
-	createdAuthor, err := authorservice.Create(ar, db)
+	createdAuthor, err := authorservice.Create(dto, db)
 	assert.NoError(t, err)
 	assert.Equal(t, int(1), createdAuthor)
 }

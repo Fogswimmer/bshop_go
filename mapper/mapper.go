@@ -16,6 +16,7 @@ func MapToBookResponse(book *entities.Book) *response.BookResponse {
 		ReleaseYear: book.ReleaseYear,
 		Summary:     book.Summary,
 		Price:       book.Price,
+		Cover:       book.Cover,
 		Author:      MapToSimpleAuthor(book.Author),
 	}
 }

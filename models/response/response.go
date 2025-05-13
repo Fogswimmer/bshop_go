@@ -18,5 +18,6 @@ type BookResponse struct {
 	ReleaseYear int                        `json:"release_year"`
 	Summary     string                     `json:"summary"`
 	Price       float64                    `json:"price"`
+	Cover       string                     `json:"cover"`
 	Author      *simplemodels.AuthorSimple `json:"author"`
 }

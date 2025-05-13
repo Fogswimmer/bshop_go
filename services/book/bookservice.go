@@ -6,13 +6,14 @@ import (
 	"api/train/models/entities"
 	"api/train/models/response"
 	authorservice "api/train/services/author"
+	fileservice "api/train/services/file"
 	"database/sql"
 	"fmt"
 )
 
 func List(db *sql.DB) ([]response.BookResponse, error) {
 	query := `
-		SELECT b.id, b.title, b.release_year, b.summary, b.price,
+		SELECT b.id, b.title, b.release_year, b.summary, b.price, b.cover,
 			a.id, a.firstname, a.lastname, a.birthday
 		FROM book b
 		LEFT JOIN author a ON b.author_id = a.id
@@ -37,6 +38,7 @@ func List(db *sql.DB) ([]response.BookResponse, error) {
 			&book.ReleaseYear,
 			&book.Summary,
 			&book.Price,
+			&book.Cover,
 			&book.Author.ID,
 			&book.Author.Firstname,
 			&book.Author.Lastname,
@@ -58,7 +60,7 @@ func Find(id int, db *sql.DB) (*response.BookResponse, error) {
 	b.Author = entities.Author{}
 
 	query := `
-		SELECT b.id, b.title, b.release_year, b.summary, b.price,
+		SELECT b.id, b.title, b.release_year, b.summary, b.price, b.cover,
 			a.id, a.firstname, a.lastname, a.birthday
 		FROM book b
 		LEFT JOIN author a ON b.author_id = a.id
@@ -73,6 +75,7 @@ func Find(id int, db *sql.DB) (*response.BookResponse, error) {
 		&b.ReleaseYear,
 		&b.Summary,
 		&b.Price,
+		&b.Cover,
 		&b.Author.ID,
 		&b.Author.Firstname,
 		&b.Author.Lastname,
@@ -150,4 +153,26 @@ func Delete(id int, db *sql.DB) error {
 	}
 
 	return nil
+}
+func SaveCover(id int, path string, filename string, db *sql.DB) (*response.BookResponse, error) {
+	url := fileservice.GetStaticFileURL(path)
+	res, err := db.Exec(
+		"UPDATE book SET cover = $1 WHERE id = $2",
+		url, id,
+	)
+	if err != nil {
+		return &response.BookResponse{}, fmt.Errorf("SaveCover error: %v", err)
+	}
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return &response.BookResponse{}, fmt.Errorf("RowsAffected error: %v", err)
+	}
+	if rowsAffected == 0 {
+		return &response.BookResponse{}, fmt.Errorf("no book with id %d found", id)
+	}
+	br, err := Find(id, db)
+	if err != nil {
+		return &response.BookResponse{}, fmt.Errorf("FindBookById error: %v", err)
+	}
+	return br, nil
 }

@@ -4,6 +4,7 @@ import (
 	dbconfig "api/train/db/config"
 	"api/train/middleware"
 	"api/train/routes"
+	fileservice "api/train/services/file"
 	"database/sql"
 	"fmt"
 	"log"
@@ -30,7 +31,6 @@ func main() {
 
 	r := gin.Default()
 
-	log.Println("The server starts...")
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:8100"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
@@ -41,6 +41,9 @@ func main() {
 	}))
 
 	r.Use(middleware.RequestLogger())
+
+	rDir := fileservice.GetUploadRootDir()
+	r.Static("/uploads", rDir)
 	routes.SetupBookRoutes(r, db)
 	routes.SetupAuthorRoutes(r, db)
 

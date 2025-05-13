@@ -16,6 +16,7 @@ func SetupBookRoutes(router *gin.Engine, db *sql.DB) {
 	router.POST("/api/book", bh.CreateBook)
 	router.PUT("/api/book/:id", bh.UpdateBook)
 	router.DELETE("/api/book/:id", bh.DeleteBook)
+	router.POST("/api/book/upload/:id", bh.UploadCover)
 }
 
 func SetupAuthorRoutes(router *gin.Engine, db *sql.DB) {

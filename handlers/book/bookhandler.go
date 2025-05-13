@@ -4,6 +4,7 @@ import (
 	"api/train/helpers"
 	"api/train/models/dto"
 	bookservice "api/train/services/book"
+	fileservice "api/train/services/file"
 	"strconv"
 
 	"database/sql"
@@ -99,4 +100,41 @@ func (h *BookHandler) DeleteBook(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"success": fmt.Sprintf("Book with ID %d successfully deleted", bookId)})
+}
+
+func (h *BookHandler) UploadCover(c *gin.Context) {
+	id := c.Param("id")
+	bookId, err := strconv.Atoi(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No id provided in the request"})
+		return
+	}
+
+	b, err := bookservice.Find(bookId, h.DB)
+	if err != nil {
+		c.JSON(500, gin.H{"error": fmt.Sprintf("Book not found: %v", err)})
+		return
+
+	}
+
+	file, err := c.FormFile("cover")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No file provided in the request"})
+		return
+	}
+
+	absDir := fileservice.GetAbsUploadsSubDir("books", b.Title)
+	path, err := fileservice.UploadFile(c, file, absDir)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to upload cover: %v", err)})
+		return
+	}
+
+	b, err = bookservice.SaveCover(bookId, path, file.Filename, h.DB)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to save to DB: %v", err)})
+		return
+	}
+
+	c.JSON(200, b)
 }

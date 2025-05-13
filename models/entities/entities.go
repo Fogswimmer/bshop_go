@@ -7,6 +7,7 @@ type Book struct {
 	Summary     string  `json:"summary"`
 	Price       float64 `json:"price"`
 	Author      Author  `json:"author"`
+	Cover       string  `json:"cover"`
 }
 
 type Author struct {
@@ -15,6 +16,7 @@ type Author struct {
 	Lastname  string `json:"lastname"`
 	Birthday  string `json:"birthday"`
 	Books     []Book `json:"books"`
+	Avatar    string `json:"avatar"`
 }
 
 func GetAuthorFullName(author Author) string {

@@ -4,6 +4,7 @@ CREATE TABLE book (
     release_date INT NOT NULL,
     summary TEXT DEFAULT NULL,
     price DECIMAL(5,2) NOT NULL,
+    cover VARCHAR(128) NOT NULL,
     author_id INT DEFAULT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (author_id) REFERENCES author(id)

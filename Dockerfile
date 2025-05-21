@@ -1,17 +1,19 @@
-FROM golang:1.24
+FROM golang:1.24.0 AS builder
 
 WORKDIR /app
 
-COPY go.mod go.sum ./
+COPY go.mod ./
+COPY go.sum ./
 RUN go mod download
 
-COPY *.go ./
+COPY . .
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /docker-gs-ping
 
-EXPOSE 8080
+FROM alpine:latest  
+WORKDIR /root/
 
-CMD ["/docker-gs-ping"]
+COPY --from=builder /docker-gs-ping .
+COPY --from=builder /app/.env .env
 
-RUN mkdir -p /app/public/uploads && \
-    chown -R appuser:appuser /app/public/uploads
+CMD ["./docker-gs-ping"]

@@ -7,5 +7,5 @@
 ```
 - C сидированием
 ```makefile
-    init-seed
+    make init-seed
 ```

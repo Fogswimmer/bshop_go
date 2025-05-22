@@ -1,4 +1,15 @@
 services:
+  goapi:
+    build: .
+    container_name: goapi
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - uploads:/app/public/uploads 
   db:
     image: postgres:16
     container_name: db
@@ -16,5 +27,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
 volumes:
   postgres_data:
+  uploads:

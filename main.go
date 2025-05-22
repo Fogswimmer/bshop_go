@@ -58,8 +58,8 @@ func setupRouter(cfg *dbconfig.DBConfig, db *sql.DB) {
 
 	rDir := fileservice.GetUploadRootDir()
 	r.Static("/uploads", rDir)
-	routes.SetupBookRoutes(r, db)
-	routes.SetupAuthorRoutes(r, db)
+
+	routes.SetupRoutes(r, db)
 	r.Run(fmt.Sprintf(":%d", cfg.ServerPort))
 }
 

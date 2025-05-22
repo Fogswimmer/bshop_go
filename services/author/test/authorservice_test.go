@@ -1,6 +1,7 @@
 package authorservice_test
 
 import (
+	"api/train/helpers"
 	"api/train/models/dto"
 	authorservice "api/train/services/author"
 	"testing"
@@ -109,7 +110,7 @@ func TestUpdateAuthorWithMockDB(t *testing.T) {
 		Birthday:  "2000-01-01",
 	}
 
-	fmtBD, _ := authorservice.FormatBD(dto.Birthday)
+	fmtBD, _ := helpers.FormatBD(dto.Birthday)
 
 	mock.ExpectExec("UPDATE author SET firstname = \\$1, lastname = \\$2, birthday = \\$3 WHERE id = \\$4").
 		WithArgs(dto.Firstname, dto.Lastname, fmtBD, authorId).

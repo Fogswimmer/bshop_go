@@ -28,27 +28,27 @@ func List(db *sql.DB) ([]response.BookResponse, error) {
 	var result []response.BookResponse
 
 	for rows.Next() {
-		var book entities.Book
+		var b entities.Book
 		var author entities.Author
-		book.Author = author
+		b.Author = author
 
 		err := rows.Scan(
-			&book.ID,
-			&book.Title,
-			&book.ReleaseYear,
-			&book.Summary,
-			&book.Price,
-			&book.Cover,
-			&book.Author.ID,
-			&book.Author.Firstname,
-			&book.Author.Lastname,
-			&book.Author.Birthday,
+			&b.ID,
+			&b.Title,
+			&b.ReleaseYear,
+			&b.Summary,
+			&b.Price,
+			&b.Cover,
+			&b.Author.ID,
+			&b.Author.Firstname,
+			&b.Author.Lastname,
+			&b.Author.Birthday,
 		)
 		if err != nil {
 			return nil, err
 		}
 
-		dto := mapper.MapToBookResponse(&book)
+		dto := mapper.MapToBookResponse(&b)
 		result = append(result, *dto)
 	}
 

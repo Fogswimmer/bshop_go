@@ -1,6 +1,7 @@
 package authorservice
 
 import (
+	"api/train/helpers"
 	"api/train/mapper"
 	"api/train/models/dto"
 	"api/train/models/entities"
@@ -8,7 +9,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"time"
 )
 
 func List(db *sql.DB) ([]*entities.Author, error) {
@@ -147,7 +147,7 @@ func Create(dto dto.AuthorDto, db *sql.DB) (int, error) {
 
 	if dto.Birthday != "" {
 		var err error
-		fmtBD, err = FormatBD(dto.Birthday)
+		fmtBD, err = helpers.FormatBD(dto.Birthday)
 		if err != nil {
 			return 0, fmt.Errorf("error formatting date: %v", err)
 		}
@@ -177,7 +177,7 @@ func Update(id int, dto dto.AuthorDto, db *sql.DB) error {
 
 	if dto.Birthday != "" {
 		var err error
-		fmtBD, err = FormatBD(dto.Birthday)
+		fmtBD, err = helpers.FormatBD(dto.Birthday)
 		if err != nil {
 			return fmt.Errorf("error formatting date: %v", err)
 		}
@@ -230,12 +230,4 @@ func FindEntity(id int, db *sql.DB) (entities.Author, error) {
 		return a, fmt.Errorf("FindAuthorById %d: %v", id, err)
 	}
 	return a, nil
-}
-
-func FormatBD(bd string) (string, error) {
-	fmtBD, err := time.Parse("2006-01-02", bd)
-	if err != nil {
-		return "", err
-	}
-	return fmtBD.Format("02 Jan 2006"), nil
 }

@@ -1,11 +1,11 @@
 # BookShop
-- Тренировочный web-проект на Go.
+- Тренировочный api + веб-сервер на Go.
 ## Инициализация
-- Development
-```bash
-make init_dev
+- Билд контейнеров без сидирования бд
+```makefile
+    make init
 ```
-- Production
-```bash
-make init_prod
+- C сидированием
+```makefile
+    init-seed
 ```

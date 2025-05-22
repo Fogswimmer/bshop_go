@@ -10,13 +10,17 @@ func MapToBookResponse(book *entities.Book) *response.BookResponse {
 	if book == nil {
 		return nil
 	}
+	var cover string
+	if book.Cover != nil {
+		cover = *book.Cover
+	}
 	return &response.BookResponse{
 		ID:          book.ID,
 		Title:       book.Title,
 		ReleaseYear: book.ReleaseYear,
 		Summary:     book.Summary,
 		Price:       book.Price,
-		Cover:       book.Cover,
+		Cover:       cover,
 		Author:      MapToSimpleAuthor(book.Author),
 	}
 }

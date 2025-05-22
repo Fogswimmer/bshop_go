@@ -7,7 +7,7 @@ type Book struct {
 	Summary     string  `json:"summary"`
 	Price       float64 `json:"price"`
 	Author      Author  `json:"author"`
-	Cover       string  `json:"cover"`
+	Cover       *string `json:"cover"`
 }
 
 type Author struct {

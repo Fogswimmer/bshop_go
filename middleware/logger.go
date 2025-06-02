@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"api/train/logger"
+	"api/train/infra/logger"
 	"fmt"
 	"time"
 

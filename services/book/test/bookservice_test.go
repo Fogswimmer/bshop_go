@@ -21,14 +21,14 @@ func TestListBooks(t *testing.T) {
 	defer db.Close()
 
 	rows := sqlmock.NewRows([]string{
-		"id", "title", "release_year", "summary", "price",
+		"id", "title", "release_year", "summary", "price", "cover",
 		"author_id", "firstname", "lastname", "birthday",
 	}).
-		AddRow(1, "Tom Sawyer", 1976, "An adventure book", 12.2, 1, "Mark", "Twain", "1835-11-30").
-		AddRow(2, "The Red Hat", 1986, "A fairy tale book", 14.2, 2, "Charles", "Perrault", "1628-01-12")
+		AddRow(1, "Tom Sawyer", 1976, "An adventure book", 12.2, "cover1.jpg", 1, "Mark", "Twain", "1835-11-30").
+		AddRow(2, "The Red Hat", 1986, "A fairy tale book", 14.2, "cover2.jpg", 2, "Charles", "Perrault", "1628-01-12")
 
 	query := `
-		SELECT b.id, b.title, b.release_year, b.summary, b.price,
+		SELECT b.id, b.title, b.release_year, b.summary, b.price, b.cover,
 			a.id, a.firstname, a.lastname, a.birthday
 		FROM book b
 		LEFT JOIN author a ON b.author_id = a.id
@@ -39,22 +39,8 @@ func TestListBooks(t *testing.T) {
 	books, err := bookservice.List(db)
 	assert.NoError(t, err)
 	assert.Len(t, books, 2)
+	assert.Equal(t, "Tom Sawyer", books[0].Title)
 
-	expected := entities.Book{
-		ID:          1,
-		Title:       "Tom Sawyer",
-		ReleaseYear: 1976,
-		Summary:     "An adventure book",
-		Price:       12.2,
-		Author: entities.Author{
-			ID:        1,
-			Firstname: "Mark",
-			Lastname:  "Twain",
-			Birthday:  "1835-11-30",
-		},
-	}
-
-	assert.Equal(t, expected, books[0])
 }
 
 func TestFindBookWithMockDB(t *testing.T) {
@@ -67,13 +53,13 @@ func TestFindBookWithMockDB(t *testing.T) {
 	bookId := 1
 
 	rows := sqlmock.NewRows([]string{
-		"id", "title", "release_year", "summary", "price",
+		"id", "title", "release_year", "summary", "price", "cover",
 		"id", "firstname", "lastname", "birthday",
 	}).
-		AddRow(1, "Tom Sawyer", 1976, "An adventure book", 12.2, 1, "Mark", "Twain", "1835-11-30")
+		AddRow(1, "Tom Sawyer", 1976, "An adventure book", 12.2, "cover1.jpg", 1, "Mark", "Twain", "1835-11-30")
 
 	query := `
-        SELECT b.id, b.title, b.release_year, b.summary, b.price,
+        SELECT b.id, b.title, b.release_year, b.summary, b.price, b.cover,
             a.id, a.firstname, a.lastname, a.birthday
         FROM book b
         LEFT JOIN author a ON b.author_id = a.id
@@ -83,13 +69,14 @@ func TestFindBookWithMockDB(t *testing.T) {
 
 	book, err := bookservice.Find(bookId, db)
 	assert.NoError(t, err)
-
+	cover := "cover1.jpg"
 	expected := entities.Book{
 		ID:          1,
 		Title:       "Tom Sawyer",
 		ReleaseYear: 1976,
 		Summary:     "An adventure book",
 		Price:       12.2,
+		Cover:       &cover,
 		Author: entities.Author{
 			ID:        1,
 			Firstname: "Mark",

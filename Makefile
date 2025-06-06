@@ -1,6 +1,6 @@
 DB_USER=postgres
 DB_NAME=books
-DB_CONTAINER_NAME=db
+DB_CONTAINER_NAME=postgres
 GO_CONTAINER_NAME=goapi
 MIGRATIONS_PATH=infra/db/create-tables.sql
 UPLOADS_PATH=/public/uploads
